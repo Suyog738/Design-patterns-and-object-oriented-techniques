@@ -1,7 +1,9 @@
 from logging.config import fileConfig
 from pathlib import Path
 import sys
-
+from unittest.mock import Base
+from src.infrastructure.persistence.base import Base
+from src.infrastructure.persistence import models
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
@@ -34,7 +36,7 @@ config.set_main_option(
 
 
 # No SQLAlchemy models yet in Phase 1
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
