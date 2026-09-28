@@ -3,8 +3,10 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class Sensor:
+class Device:
     id: UUID | None
     device_type: str
-    display_name: str | None
+    role: str
+    device_family: str
+    display_name: str
     default_config: dict

@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import {
   createSensor,
   fetchSensors,
+  fetchDevices,
+  provisionDeviceFamily,
   type Sensor,
+  type DeviceDto,
+  type DeviceFamily,
 } from "../services/api";
 
 const sections = [
@@ -34,6 +38,14 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
+  const [deviceFamily, setDeviceFamily] =
+    useState<DeviceFamily>("simulation");
+
+  const [devices, setDevices] = useState<DeviceDto[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [provisioning, setProvisioning] = useState(false);
+  const [deviceError, setDeviceError] = useState("");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -61,6 +73,37 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDevices() {
+      try {
+        setDevicesLoading(true);
+        setDeviceError("");
+
+        const data = await fetchDevices(deviceFamily);
+
+        if (!cancelled) {
+          setDevices(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setDeviceError("Failed to load devices.");
+        }
+      } finally {
+        if (!cancelled) {
+          setDevicesLoading(false);
+        }
+      }
+    }
+
+    loadDevices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceFamily]);
+
   async function handleCreateSensor(
     type: "moisture" | "light",
     displayName: string
@@ -80,6 +123,22 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleProvisionFamily() {
+    try {
+      setProvisioning(true);
+      setDeviceError("");
+
+      await provisionDeviceFamily(deviceFamily);
+
+      const data = await fetchDevices(deviceFamily);
+      setDevices(data);
+    } catch {
+      setDeviceError("Failed to provision device family.");
+    } finally {
+      setProvisioning(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -93,6 +152,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
         {/* Sensors */}
         <section
           id="sensors"
@@ -174,6 +234,132 @@ export default function DashboardPage() {
           )}
         </section>
 
+        {/* Device Families */}
+        <section
+          id="devices"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Device Families
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Select a device family and provision its complete device set.
+          </p>
+
+          {/* Family buttons */}
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setDeviceFamily("simulation")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                deviceFamily === "simulation"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Simulation
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDeviceFamily("edge")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                deviceFamily === "edge"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Edge
+            </button>
+          </div>
+
+          {/* Provision button */}
+          <button
+            type="button"
+            onClick={handleProvisionFamily}
+            disabled={provisioning}
+            className="mt-4 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {provisioning
+              ? "Provisioning..."
+              : `Provision ${deviceFamily}`}
+          </button>
+
+          {deviceError && (
+            <p className="mt-4 text-sm text-red-500">
+              {deviceError}
+            </p>
+          )}
+
+          {/* Device list */}
+          <div className="mt-6">
+            <h4 className="font-semibold text-slate-900">
+              {deviceFamily === "simulation"
+                ? "Simulation Devices"
+                : "Edge Devices"}
+            </h4>
+
+            {devicesLoading && (
+              <p className="mt-4 text-sm text-slate-500">
+                Loading devices...
+              </p>
+            )}
+
+            {!devicesLoading &&
+              !deviceError &&
+              devices.length === 0 && (
+                <p className="mt-4 text-sm text-slate-500">
+                  No devices found for this family.
+                </p>
+              )}
+
+            {!devicesLoading &&
+              !deviceError &&
+              devices.length > 0 && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {devices.map((device) => (
+                    <div
+                      key={device.id}
+                      className="rounded-lg border bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium text-slate-900">
+                          {device.display_name}
+                        </p>
+
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${
+                            device.role === "sensor"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}
+                        >
+                          {device.role}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm text-slate-500">
+                        Type: {device.device_type}
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Family: {device.device_family}
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Protocol:{" "}
+                        {String(
+                          device.default_config.protocol ?? "N/A"
+                        )}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </div>
+        </section>
+
         {/* Other sections */}
         {sections.map((section) => (
           <section
@@ -186,7 +372,8 @@ export default function DashboardPage() {
             </h3>
 
             <p className="mt-2 text-sm text-slate-500">
-              Placeholder for the {section.title.toLowerCase()} section.
+              Placeholder for the{" "}
+              {section.title.toLowerCase()} section.
             </p>
           </section>
         ))}
