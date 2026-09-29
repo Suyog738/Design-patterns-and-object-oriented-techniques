@@ -9,28 +9,9 @@ import {
   type DeviceFamily,
 } from "../services/api";
 
-const sections = [
-  {
-    id: "config",
-    title: "Configuration",
-  },
-  {
-    id: "automation",
-    title: "Automation",
-  },
-  {
-    id: "overview",
-    title: "Overview",
-  },
-  {
-    id: "controls",
-    title: "Controls",
-  },
-  {
-    id: "events",
-    title: "Events",
-  },
-];
+import LocationConfigWizard from "../components/LocationConfigWizard";
+
+
 
 export default function DashboardPage() {
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -106,7 +87,7 @@ export default function DashboardPage() {
 
   async function handleCreateSensor(
     type: "moisture" | "light",
-    displayName: string
+    displayName: string,
   ) {
     try {
       setCreating(true);
@@ -153,7 +134,21 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 
-        {/* Sensors */}
+        {/* CONFIGURATION */}
+        <section
+          id="config"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Configuration
+          </h3>
+
+          <div className="mt-5">
+            <LocationConfigWizard />
+          </div>
+        </section>
+
+        {/* SENSORS */}
         <section
           id="sensors"
           className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
@@ -169,7 +164,7 @@ export default function DashboardPage() {
               onClick={() =>
                 handleCreateSensor(
                   "moisture",
-                  "Greenhouse Moisture Sensor"
+                  "Greenhouse Moisture Sensor",
                 )
               }
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -183,7 +178,7 @@ export default function DashboardPage() {
               onClick={() =>
                 handleCreateSensor(
                   "light",
-                  "Greenhouse Light Sensor"
+                  "Greenhouse Light Sensor",
                 )
               }
               className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -204,37 +199,41 @@ export default function DashboardPage() {
             </p>
           )}
 
-          {!loading && !error && sensors.length === 0 && (
-            <p className="mt-4 text-sm text-slate-500">
-              No sensors found.
-            </p>
-          )}
+          {!loading &&
+            !error &&
+            sensors.length === 0 && (
+              <p className="mt-4 text-sm text-slate-500">
+                No sensors found.
+              </p>
+            )}
 
-          {!loading && !error && sensors.length > 0 && (
-            <div className="mt-5 space-y-3">
-              {sensors.map((sensor) => (
-                <div
-                  key={sensor.id}
-                  className="rounded-lg border bg-slate-50 p-4"
-                >
-                  <p className="font-medium text-slate-900">
-                    {sensor.display_name || "Unnamed sensor"}
-                  </p>
+          {!loading &&
+            !error &&
+            sensors.length > 0 && (
+              <div className="mt-5 space-y-3">
+                {sensors.map((sensor) => (
+                  <div
+                    key={sensor.id}
+                    className="rounded-lg border bg-slate-50 p-4"
+                  >
+                    <p className="font-medium text-slate-900">
+                      {sensor.display_name || "Unnamed sensor"}
+                    </p>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Type: {sensor.device_type}
-                  </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Type: {sensor.device_type}
+                    </p>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    ID: {sensor.id}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+                    <p className="mt-1 text-sm text-slate-500">
+                      ID: {sensor.id}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
         </section>
 
-        {/* Device Families */}
+        {/* DEVICE FAMILIES */}
         <section
           id="devices"
           className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2"
@@ -247,7 +246,6 @@ export default function DashboardPage() {
             Select a device family and provision its complete device set.
           </p>
 
-          {/* Family buttons */}
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
@@ -274,7 +272,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Provision button */}
           <button
             type="button"
             onClick={handleProvisionFamily}
@@ -292,7 +289,6 @@ export default function DashboardPage() {
             </p>
           )}
 
-          {/* Device list */}
           <div className="mt-6">
             <h4 className="font-semibold text-slate-900">
               {deviceFamily === "simulation"
@@ -360,24 +356,60 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Other sections */}
-        {sections.map((section) => (
-          <section
-            key={section.id}
-            id={section.id}
-            className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
-          >
-            <h3 className="text-lg font-semibold text-emerald-700">
-              {section.title}
-            </h3>
+        {/* PHASE 3 OTHER SECTIONS */}
+        <section
+          id="automation"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Automation
+          </h3>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Placeholder for the{" "}
-              {section.title.toLowerCase()} section.
-            </p>
-          </section>
-        ))}
+          <p className="mt-2 text-sm text-slate-500">
+            Placeholder for the automation section.
+          </p>
+        </section>
+
+        <section
+          id="overview"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Overview
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Placeholder for the overview section.
+          </p>
+        </section>
+
+        <section
+          id="controls"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Controls
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Placeholder for the controls section.
+          </p>
+        </section>
+
+        <section
+          id="events"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+        >
+          <h3 className="text-lg font-semibold text-emerald-700">
+            Events
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Placeholder for the events section.
+          </p>
+        </section>
       </div>
     </div>
   );
 }
+

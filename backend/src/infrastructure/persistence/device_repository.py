@@ -10,8 +10,6 @@ class DeviceRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    
-
     def save_sensor(self, sensor: Sensor) -> Sensor:
         row = DeviceRow(
             device_type=sensor.device_type,
@@ -51,8 +49,6 @@ class DeviceRepository:
             for row in rows
         ]
 
-
-
     def save_device(self, device: Device) -> Device:
         row = DeviceRow(
             device_type=device.device_type,
@@ -60,6 +56,8 @@ class DeviceRepository:
             device_family=device.device_family,
             display_name=device.display_name,
             default_config=device.default_config,
+            zone_id=device.zone_id,
+            location_id=device.location_id,
         )
 
         self._db.add(row)
@@ -68,7 +66,10 @@ class DeviceRepository:
 
         return self._row_to_device(row)
 
-    def save_devices(self, devices: list[Device]) -> list[Device]:
+    def save_devices(
+        self,
+        devices: list[Device],
+    ) -> list[Device]:
         rows = [
             DeviceRow(
                 device_type=device.device_type,
@@ -76,6 +77,8 @@ class DeviceRepository:
                 device_family=device.device_family,
                 display_name=device.display_name,
                 default_config=device.default_config,
+                zone_id=device.zone_id,
+                location_id=device.location_id,
             )
             for device in devices
         ]
@@ -86,7 +89,10 @@ class DeviceRepository:
         for row in rows:
             self._db.refresh(row)
 
-        return [self._row_to_device(row) for row in rows]
+        return [
+            self._row_to_device(row)
+            for row in rows
+        ]
 
     def list_devices(
         self,
@@ -106,11 +112,16 @@ class DeviceRepository:
                 DeviceRow.role == role
             )
 
-        statement = statement.order_by(DeviceRow.created_at)
+        statement = statement.order_by(
+            DeviceRow.created_at
+        )
 
         rows = self._db.scalars(statement).all()
 
-        return [self._row_to_device(row) for row in rows]
+        return [
+            self._row_to_device(row)
+            for row in rows
+        ]
 
     @staticmethod
     def _row_to_device(row: DeviceRow) -> Device:
@@ -120,5 +131,8 @@ class DeviceRepository:
             role=row.role,
             device_family=row.device_family,
             display_name=row.display_name or "",
-            default_config=row.default_config,
+            default_config=row.default_config or {},
+            zone_id=row.zone_id,
+            location_id=row.location_id,
         )
+

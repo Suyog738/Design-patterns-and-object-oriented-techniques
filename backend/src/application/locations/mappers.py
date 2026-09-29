@@ -1,0 +1,33 @@
+from application.locations.dto import (
+    LocationConfigDto,
+    LocationDto,
+    ZoneDto,
+)
+from infrastructure.persistence.models import LocationRow, ZoneRow
+
+
+def location_config_to_dto(
+    location_row: LocationRow,
+    zone_rows: list[ZoneRow],
+) -> LocationConfigDto:
+    return LocationConfigDto(
+        location=LocationDto(
+            id=location_row.id,
+            name=location_row.name,
+        ),
+        zones=[
+            ZoneDto(
+                id=zone.id,
+                location_id=zone.location_id,
+                name=zone.name,
+                moisture_threshold_low=float(
+                    zone.moisture_threshold_low
+                ),
+                moisture_threshold_high=float(
+                    zone.moisture_threshold_high
+                ),
+                schedule=zone.schedule or {},
+            )
+            for zone in zone_rows
+        ],
+    )

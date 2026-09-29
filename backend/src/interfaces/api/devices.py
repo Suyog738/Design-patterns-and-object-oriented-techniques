@@ -5,11 +5,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from application.devices.service import DeviceFamilyService
+from application.locations.dto import ZoneAssignmentRequestDto
+from application.locations.zone_assignment_service import (
+    ZoneAssignmentService,
+)
 from domain.devices.entity import Device
 from domain.devices.factories import get_family_factory
 from infrastructure.db import get_db
 from infrastructure.persistence.device_repository import DeviceRepository
-
 
 router = APIRouter(
     prefix="/api/devices",
@@ -24,11 +27,15 @@ class DeviceDto(BaseModel):
     device_family: str
     display_name: str
     default_config: dict
+    zone_id: UUID | None = None
+    location_id: UUID | None = None
 
 
 def device_to_dto(device: Device) -> DeviceDto:
     if device.id is None:
-        raise ValueError("Device must be saved before converting to DTO")
+        raise ValueError(
+            "Device must be saved before converting to DTO"
+        )
 
     return DeviceDto(
         id=device.id,
@@ -37,11 +44,18 @@ def device_to_dto(device: Device) -> DeviceDto:
         device_family=device.device_family,
         display_name=device.display_name,
         default_config=device.default_config,
+        zone_id=getattr(device, "zone_id", None),
+        location_id=getattr(device, "location_id", None),
     )
 
 
-def devices_to_dtos(devices: list[Device]) -> list[DeviceDto]:
-    return [device_to_dto(device) for device in devices]
+def devices_to_dtos(
+    devices: list[Device],
+) -> list[DeviceDto]:
+    return [
+        device_to_dto(device)
+        for device in devices
+    ]
 
 
 def get_device_service(
@@ -51,7 +65,10 @@ def get_device_service(
     return DeviceFamilyService(repository)
 
 
-@router.get("", response_model=list[DeviceDto])
+@router.get(
+    "",
+    response_model=list[DeviceDto],
+)
 def list_devices(
     family: str | None = Query(default=None),
     role: str | None = Query(default=None),
@@ -85,3 +102,26 @@ def provision_devices(
     devices = service.provision_family(family)
 
     return devices_to_dtos(devices)
+
+
+@router.patch(
+    "/{device_id}/zone",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def assign_device_to_zone(
+    device_id: UUID,
+    request: ZoneAssignmentRequestDto,
+    db: Session = Depends(get_db),
+):
+    service = ZoneAssignmentService(db)
+
+    try:
+        service.assign(
+            device_id=device_id,
+            zone_id=request.zone_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
