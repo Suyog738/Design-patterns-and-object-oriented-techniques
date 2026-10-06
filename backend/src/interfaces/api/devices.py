@@ -31,6 +31,11 @@ class DeviceDto(BaseModel):
     location_id: UUID | None = None
 
 
+class SamplingUpdateRequest(BaseModel):
+    sampling_interval_seconds: int
+    tracking_enabled: bool
+
+
 def device_to_dto(device: Device) -> DeviceDto:
     if device.id is None:
         raise ValueError(
@@ -125,3 +130,57 @@ def assign_device_to_zone(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+@router.patch(
+    "/{device_id}/sampling",
+    response_model=DeviceDto,
+)
+def update_sampling(
+    device_id: UUID,
+    request: SamplingUpdateRequest,
+    db: Session = Depends(get_db),
+) -> DeviceDto:
+    if request.sampling_interval_seconds < 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="sampling_interval_seconds must be at least 5.",
+        )
+
+    device = db.get(
+        DeviceRow,
+        device_id,
+    )
+
+    if device is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found.",
+        )
+
+    if device.role != "sensor":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sampling settings can only be changed for sensors.",
+        )
+
+    device.sampling_interval_seconds = (
+        request.sampling_interval_seconds
+    )
+    device.tracking_enabled = request.tracking_enabled
+
+    db.commit()
+    db.refresh(device)
+
+    domain_device = Device(
+        id=device.id,
+        device_type=device.device_type,
+        role=device.role,
+        device_family=device.device_family,
+        display_name=device.display_name or "",
+        default_config=device.default_config or {},
+        zone_id=device.zone_id,
+        location_id=device.location_id,
+    )
+
+    return device_to_dto(domain_device)

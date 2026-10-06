@@ -12,6 +12,19 @@ export interface Sensor {
   default_config: Record<string, unknown>;
 }
 
+export interface Reading {
+  device_id: string;
+  value: number;
+  unit: string;
+  source: string;
+  recorded_at: string;
+}
+
+export interface SamplingUpdateRequest {
+  sampling_interval_seconds: number;
+  tracking_enabled: boolean;
+}
+
 export type DeviceFamily = "simulation" | "edge";
 
 export interface DeviceDto {
@@ -120,6 +133,26 @@ export async function createSensor(
   });
 }
 
+export async function readSensor(
+  deviceId: string,
+): Promise<Reading> {
+  return request<Reading>(
+    `/api/sensors/${deviceId}/read`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function fetchSensorReadings(
+  deviceId: string,
+  limit = 20,
+): Promise<Reading[]> {
+  return request<Reading[]>(
+    `/api/sensors/${deviceId}/readings?limit=${limit}`,
+  );
+}
+
 /* ---------------- Devices ---------------- */
 
 export async function fetchDevices(
@@ -139,6 +172,19 @@ export async function provisionDeviceFamily(
     `/api/devices/provision?family=${encodeURIComponent(family)}`,
     {
       method: "POST",
+    },
+  );
+}
+
+export async function updateDeviceSampling(
+  deviceId: string,
+  data: SamplingUpdateRequest,
+): Promise<DeviceDto> {
+  return request<DeviceDto>(
+    `/api/devices/${deviceId}/sampling`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
     },
   );
 }
@@ -240,4 +286,3 @@ export async function fetchZoneDevices(
     `/api/locations/${locationId}/zones/${zoneId}/devices`,
   );
 }
-

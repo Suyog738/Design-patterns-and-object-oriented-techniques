@@ -2,6 +2,9 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
+    Index,
+    Integer,
     DateTime,
     ForeignKey,
     Numeric,
@@ -76,6 +79,20 @@ class DeviceRow(Base):
         nullable=True,
     )
 
+    sampling_interval_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=300,
+        server_default="300",
+    )
+
+    tracking_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+    )
+
 
 class LocationRow(Base):
     __tablename__ = "locations"
@@ -147,4 +164,48 @@ class ZoneRow(Base):
     location: Mapped["LocationRow"] = relationship(
         "LocationRow",
         back_populates="zones",
+    )
+
+class ReadingRow(Base):
+    __tablename__ = "sensor_readings"
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    device_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    value: Mapped[float] = mapped_column(
+        Numeric(10, 4),
+        nullable=False,
+    )
+
+    unit: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+    )
+
+    source: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+    )
+
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_sensor_readings_device_recorded_at",
+            "device_id",
+            "recorded_at",
+        ),
     )
