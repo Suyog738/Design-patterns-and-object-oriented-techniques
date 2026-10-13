@@ -14,6 +14,7 @@ import {
 } from "../services/api";
 
 import LocationConfigWizard from "../components/LocationConfigWizard";
+import StrategyPanel from "../components/StrategyPanel";
 
 export default function DashboardPage() {
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -704,7 +705,7 @@ export default function DashboardPage() {
 
         <section
           id="devices"
-          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
         >
           <h3 className="text-lg font-semibold text-emerald-700">
             Device Families
@@ -824,18 +825,12 @@ export default function DashboardPage() {
               )}
           </div>
         </section>
-
+              
         <section
           id="automation"
-          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
         >
-          <h3 className="text-lg font-semibold text-emerald-700">
-            Automation
-          </h3>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Placeholder for the automation section.
-          </p>
+          <StrategyPanel />
         </section>
 
         <section

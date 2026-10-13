@@ -286,3 +286,41 @@ export async function fetchZoneDevices(
     `/api/locations/${locationId}/zones/${zoneId}/devices`,
   );
 }
+
+export type AutomationStrategyKey =
+  | "conservative"
+  | "aggressive";
+
+export interface AutomationRecommendationDto {
+  location_id: string;
+  strategy_key: AutomationStrategyKey;
+  action: string;
+  reason: string;
+  score?: number | null;
+}
+
+export async function setLocationAutomationStrategy(
+  locationId: string,
+  strategyKey: AutomationStrategyKey,
+): Promise<void> {
+  await request<void>(
+    `/api/locations/${locationId}/automation`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        strategy_key: strategyKey,
+      }),
+    },
+  );
+}
+
+export async function evaluateLocationAutomation(
+  locationId: string,
+): Promise<AutomationRecommendationDto> {
+  return request<AutomationRecommendationDto>(
+    `/api/locations/${locationId}/automation/evaluate`,
+    {
+      method: "POST",
+    },
+  );
+}
