@@ -15,6 +15,8 @@ import {
 
 import LocationConfigWizard from "../components/LocationConfigWizard";
 import StrategyPanel from "../components/StrategyPanel";
+import OverviewPanel from "../components/OverviewPanel";
+
 
 export default function DashboardPage() {
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -835,15 +837,9 @@ export default function DashboardPage() {
 
         <section
           id="overview"
-          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
         >
-          <h3 className="text-lg font-semibold text-emerald-700">
-            Overview
-          </h3>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Placeholder for the overview section.
-          </p>
+           <OverviewPanel />
         </section>
 
         <section
