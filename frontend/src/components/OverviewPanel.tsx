@@ -7,6 +7,28 @@ import {
   type LocationOverview,
 } from "../services/api";
 
+function getActuatorStateStyle(state: string | null | undefined) {
+  switch (state?.toLowerCase()) {
+    case "off":
+      return "bg-gray-200 text-gray-700";
+
+    case "idle":
+      return "bg-slate-200 text-slate-700";
+
+    case "running":
+      return "bg-emerald-100 text-emerald-700";
+
+    case "error":
+      return "bg-red-100 text-red-700";
+
+    case "maintenance":
+      return "bg-amber-100 text-amber-700";
+
+    default:
+      return "bg-slate-200 text-slate-700";
+  }
+}
+
 export default function OverviewPanel() {
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [locationId, setLocationId] = useState("");
@@ -53,44 +75,60 @@ export default function OverviewPanel() {
     };
   }, []);
 
-useEffect(() => {
-  if (!locationId) {
-    return;
-  }
+  useEffect(() => {
+    if (!locationId) {
+      return;
+    }
 
-  let cancelled = false;
+    let cancelled = false;
 
-  async function loadOverview() {
-    setLoadingOverview(true);
-    setError("");
+    async function loadOverview() {
+      setLoadingOverview(true);
+      setError("");
 
-    try {
-      const data = await fetchOverview(locationId);
-      if (!cancelled) {
-        setOverview(data);
-      }
-    } catch (err) {
-      if (!cancelled) {
-        setOverview(null);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load the overview."
-        );
-      }
-    } finally {
-      if (!cancelled) {
-        setLoadingOverview(false);
+      try {
+        const data = await fetchOverview(locationId);
+
+        if (!cancelled) {
+          setOverview(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setOverview(null);
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load the overview.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingOverview(false);
+        }
       }
     }
-  }
 
-  void loadOverview();
+    void loadOverview();
 
-  return () => {
-    cancelled = true;
-  };
-}, [locationId, refreshCount]);
+    return () => {
+      cancelled = true;
+    };
+  }, [locationId, refreshCount]);
+
+  useEffect(() => {
+    if (!locationId) {
+      return;
+    }
+
+    const refresh = () => setRefreshCount((count) => count + 1);
+    const intervalId = window.setInterval(refresh, 10_000);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [locationId]);
 
   return (
     <div className="space-y-6">
@@ -136,7 +174,7 @@ useEffect(() => {
         </p>
       )}
 
-      {loadingOverview && (
+      {loadingOverview && !overview && (
         <p className="text-sm text-slate-500">
           Loading location overview...
         </p>
@@ -206,8 +244,7 @@ useEffect(() => {
                 <h5 className="font-semibold">{zone.name}</h5>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Moisture thresholds:{" "}
-                  {zone.moisture_threshold_low}–{zone.moisture_threshold_high}
+                  Moisture thresholds: {zone.moisture_threshold_low}–{zone.moisture_threshold_high}
                 </p>
 
                 {zone.devices.length === 0 ? (
@@ -226,9 +263,25 @@ useEffect(() => {
                           key={device.id}
                           className="rounded-lg bg-slate-50 p-3"
                         >
-                          <p className="font-medium">
-                            {device.display_name}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">
+                              {device.display_name}
+                            </p>
+
+                            {device.role === "actuator" && (
+                              <span
+                                 title={
+                                  (device.allowed_commands ?? []).length > 0
+                                    ? `Allowed commands: ${(device.allowed_commands ?? []).join(", ")}`
+                                    : "No commands available"
+                                }
+                                className={`rounded-full px-2.5 py-1 text-xs font-medium ${getActuatorStateStyle(device.state)}`}
+                              >
+                                {device.state ?? "unknown"}
+                              </span>
+                            )}
+                          </div>
+
                           <p className="text-sm text-slate-500">
                             {device.device_type} · {device.role}
                           </p>

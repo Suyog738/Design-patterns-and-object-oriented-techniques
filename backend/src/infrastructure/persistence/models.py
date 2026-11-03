@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     String,
+    func,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -245,4 +246,25 @@ class AutomationRuleRow(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=text("now()"),
+    )
+
+class ActuatorStateRow(Base):
+    __tablename__ = "actuator_states"
+
+    device_id: Mapped[UUID] = mapped_column(
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    state: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="idle",
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )

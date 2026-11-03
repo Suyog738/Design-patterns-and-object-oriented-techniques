@@ -14,10 +14,12 @@ from application.overview.dto import (
     OverviewRecommendationDto,
     OverviewZoneDto,
 )
+from domain.actuators.state import ActuatorState, get_allowed_commands
 from infrastructure.persistence.automation_repository import (
     AutomationRepository,
 )
 from infrastructure.persistence.models import (
+    ActuatorStateRow,
     DeviceRow,
     LocationRow,
     ReadingRow,
@@ -68,7 +70,19 @@ class LocationOverviewFacade:
         readings_by_device: dict[UUID, ReadingRow] = {}
         device_ids = [device.id for device in devices]
 
+        actuator_states: dict[UUID, ActuatorStateRow] = {}
+
         if device_ids:
+            state_rows = self._db.scalars(
+                select(ActuatorStateRow).where(
+                    ActuatorStateRow.device_id.in_(device_ids)
+                )
+            ).all()
+
+            actuator_states = {
+                row.device_id: row for row in state_rows
+            }
+
             ranked_readings = (
                 select(
                     ReadingRow.id.label("reading_id"),
@@ -105,17 +119,34 @@ class LocationOverviewFacade:
         for zone in zones:
             zone_devices = devices_by_zone[zone.id]
 
-            device_dtos = [
-                OverviewDeviceDto(
-                    id=device.id,
-                    device_type=device.device_type,
-                    role=device.role,
-                    display_name=(
-                        device.display_name or device.device_type
-                    ),
+            device_dtos = []
+
+            for device in zone_devices:
+                state_row = actuator_states.get(device.id)
+
+                state = None
+                allowed_commands = []
+
+                if device.role == "actuator":
+                    state = (
+                        ActuatorState(state_row.state)
+                        if state_row is not None
+                        else ActuatorState.IDLE
+                    )
+                    allowed_commands = get_allowed_commands(state)
+
+                device_dtos.append(
+                    OverviewDeviceDto(
+                        id=device.id,
+                        device_type=device.device_type,
+                        role=device.role,
+                        display_name=(
+                            device.display_name or device.device_type
+                        ),
+                        state=state.value if state is not None else None,
+                        allowed_commands=allowed_commands,
+                    )
                 )
-                for device in zone_devices
-            ]
 
             reading_dtos = [
                 OverviewReadingDto(

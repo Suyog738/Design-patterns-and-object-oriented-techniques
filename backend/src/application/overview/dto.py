@@ -20,6 +20,8 @@ class OverviewDeviceDto(BaseModel):
     device_type: str
     role: str
     display_name: str
+    state: str | None = None
+    allowed_commands: list[str] = []
 
 
 class OverviewReadingDto(BaseModel):

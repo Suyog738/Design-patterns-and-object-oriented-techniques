@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from application.devices.service import DeviceFamilyService
@@ -9,10 +9,20 @@ from application.locations.dto import ZoneAssignmentRequestDto
 from application.locations.zone_assignment_service import (
     ZoneAssignmentService,
 )
+from domain.actuators.state import (
+    ActuatorState,
+    IllegalTransitionError,
+    get_allowed_commands,
+)
 from domain.devices.entity import Device
 from domain.devices.factories import get_family_factory
 from infrastructure.db import get_db
+from infrastructure.persistence.actuator_state_repository import (
+    ActuatorStateRepository,
+)
 from infrastructure.persistence.device_repository import DeviceRepository
+from infrastructure.persistence.models import DeviceRow
+
 
 router = APIRouter(
     prefix="/api/devices",
@@ -29,6 +39,8 @@ class DeviceDto(BaseModel):
     default_config: dict
     zone_id: UUID | None = None
     location_id: UUID | None = None
+    state: str | None = None
+    allowed_commands: list[str] = Field(default_factory=list)
 
 
 class SamplingUpdateRequest(BaseModel):
@@ -36,11 +48,24 @@ class SamplingUpdateRequest(BaseModel):
     tracking_enabled: bool
 
 
-def device_to_dto(device: Device) -> DeviceDto:
+class TransitionRequest(BaseModel):
+    target: str
+
+
+def device_to_dto(
+    device: Device,
+    state: str | None = None,
+) -> DeviceDto:
     if device.id is None:
         raise ValueError(
             "Device must be saved before converting to DTO"
         )
+
+    allowed_commands = (
+        get_allowed_commands(ActuatorState(state))
+        if device.role == "actuator" and state is not None
+        else []
+    )
 
     return DeviceDto(
         id=device.id,
@@ -51,14 +76,28 @@ def device_to_dto(device: Device) -> DeviceDto:
         default_config=device.default_config,
         zone_id=getattr(device, "zone_id", None),
         location_id=getattr(device, "location_id", None),
+        state=state,
+        allowed_commands=allowed_commands,
     )
 
 
 def devices_to_dtos(
     devices: list[Device],
+    state_repository: ActuatorStateRepository,
 ) -> list[DeviceDto]:
+    states = state_repository.get_states(
+        [
+            device.id
+            for device in devices
+            if device.role == "actuator" and device.id is not None
+        ]
+    )
+
     return [
-        device_to_dto(device)
+        device_to_dto(
+            device,
+            states.get(device.id) if device.role == "actuator" else None,
+        )
         for device in devices
     ]
 
@@ -78,13 +117,17 @@ def list_devices(
     family: str | None = Query(default=None),
     role: str | None = Query(default=None),
     service: DeviceFamilyService = Depends(get_device_service),
+    db: Session = Depends(get_db),
 ) -> list[DeviceDto]:
     devices = service.list_devices(
         device_family=family,
         role=role,
     )
 
-    return devices_to_dtos(devices)
+    return devices_to_dtos(
+        devices,
+        ActuatorStateRepository(db),
+    )
 
 
 @router.post(
@@ -95,6 +138,7 @@ def list_devices(
 def provision_devices(
     family: str = Query(...),
     service: DeviceFamilyService = Depends(get_device_service),
+    db: Session = Depends(get_db),
 ) -> list[DeviceDto]:
     try:
         get_family_factory(family)
@@ -106,7 +150,67 @@ def provision_devices(
 
     devices = service.provision_family(family)
 
-    return devices_to_dtos(devices)
+    return devices_to_dtos(
+        devices,
+        ActuatorStateRepository(db),
+    )
+
+
+@router.post(
+    "/{device_id}/transition",
+    response_model=DeviceDto,
+)
+def transition_actuator(
+    device_id: UUID,
+    request: TransitionRequest,
+    db: Session = Depends(get_db),
+) -> DeviceDto:
+    repository = ActuatorStateRepository(db)
+
+    try:
+        state, _ = repository.transition(
+            device_id=device_id,
+            target=request.target,
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except IllegalTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+    device_row = db.get(DeviceRow, device_id)
+
+    if device_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found.",
+        )
+
+    device = Device(
+        id=device_row.id,
+        device_type=device_row.device_type,
+        role=device_row.role,
+        device_family=device_row.device_family,
+        display_name=device_row.display_name or "",
+        default_config=device_row.default_config or {},
+        zone_id=device_row.zone_id,
+        location_id=device_row.location_id,
+    )
+
+    return device_to_dto(
+        device,
+        state.value,
+    )
 
 
 @router.patch(

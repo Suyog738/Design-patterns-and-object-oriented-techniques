@@ -3,7 +3,10 @@ from sqlalchemy.orm import Session
 
 from domain.devices.entity import Device
 from domain.sensors.entity import Sensor
-from infrastructure.persistence.models import DeviceRow
+from infrastructure.persistence.models import (
+    ActuatorStateRow,
+    DeviceRow,
+)
 
 
 class DeviceRepository:
@@ -61,6 +64,16 @@ class DeviceRepository:
         )
 
         self._db.add(row)
+        self._db.flush()
+
+        if device.role == "actuator":
+            self._db.add(
+                ActuatorStateRow(
+                    device_id=row.id,
+                    state="idle",
+                )
+            )
+
         self._db.commit()
         self._db.refresh(row)
 
@@ -84,6 +97,20 @@ class DeviceRepository:
         ]
 
         self._db.add_all(rows)
+        self._db.flush()
+
+        actuator_states = [
+            ActuatorStateRow(
+                device_id=row.id,
+                state="idle",
+            )
+            for row in rows
+            if row.role == "actuator"
+        ]
+
+        if actuator_states:
+            self._db.add_all(actuator_states)
+
         self._db.commit()
 
         for row in rows:
@@ -135,4 +162,3 @@ class DeviceRepository:
             zone_id=row.zone_id,
             location_id=row.location_id,
         )
-

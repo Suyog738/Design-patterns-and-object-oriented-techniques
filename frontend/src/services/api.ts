@@ -36,7 +36,10 @@ export interface DeviceDto {
   default_config: Record<string, unknown>;
   zone_id: string | null;
   location_id: string | null;
+  state: string | null;
+  allowed_commands: string[];
 }
+
 
 export interface LocationDto {
   id: string;
@@ -331,6 +334,8 @@ export type OverviewDevice = {
   device_type: string;
   role: string;
   display_name: string;
+  state: string | null;
+  allowed_commands: string[];
 };
 
 export type OverviewReading = {
