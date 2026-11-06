@@ -380,3 +380,31 @@ export async function fetchOverview(
     `/api/locations/${locationId}/overview`,
   );
 }
+
+export interface ActuatorExecutionDto {
+  id: string;
+  device_id: string;
+  success: boolean;
+  policy_applied: string[];
+  message: string | null;
+  created_at: string;
+}
+
+export async function fetchActuatorExecutions(
+  limit = 20,
+): Promise<ActuatorExecutionDto[]> {
+  return request<ActuatorExecutionDto[]>(
+    `/api/actuators/executions?limit=${limit}`,
+  );
+}
+
+export async function applyActuatorCommand(
+  deviceId: string,
+  command: string,
+  payload: Record<string, unknown> = {},
+): Promise<void> {
+  await request<void>(`/api/actuators/${deviceId}/apply`, {
+    method: "POST",
+    body: JSON.stringify({ command, payload }),
+  });
+}

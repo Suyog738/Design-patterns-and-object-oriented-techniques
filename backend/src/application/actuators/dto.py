@@ -1,0 +1,13 @@
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class ActuatorExecutionDto(BaseModel):
+    id: UUID
+    device_id: UUID
+    success: bool
+    policy_applied: list[str]
+    message: str | None = None
+    created_at: datetime

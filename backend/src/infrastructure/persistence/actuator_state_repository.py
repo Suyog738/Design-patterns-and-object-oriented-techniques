@@ -9,6 +9,7 @@ from domain.actuators.state import (
     IllegalTransitionError,
 )
 from infrastructure.persistence.models import ActuatorStateRow, DeviceRow
+from datetime import datetime
 
 
 class ActuatorStateRepository:
@@ -31,6 +32,17 @@ class ActuatorStateRepository:
             row.device_id: row.state
             for row in rows
         }
+    
+    def get_snapshot(
+        self,
+        device_id: UUID,
+    ) -> tuple[str, datetime] | None:
+        row = self._db.get(ActuatorStateRow, device_id)
+
+        if row is None:
+            return None
+
+        return row.state, row.updated_at
 
     def transition(
         self,

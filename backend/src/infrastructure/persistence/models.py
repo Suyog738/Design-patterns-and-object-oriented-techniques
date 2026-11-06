@@ -10,6 +10,7 @@ from sqlalchemy import (
     Numeric,
     String,
     func,
+    Text,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -41,11 +42,10 @@ class DeviceRow(Base):
         String(32),
         nullable=False,
         server_default="simulation",
-        index=True,
     )
 
     display_name: Mapped[str | None] = mapped_column(
-        String(120),
+        String(128),
         nullable=True,
     )
 
@@ -93,6 +93,13 @@ class DeviceRow(Base):
         default=True,
         server_default="true",
     )
+    
+    __table_args__ = (
+        Index("ix_devices_family", "device_family"),
+        Index("ix_devices_role", "role"),
+        Index("ix_devices_location_id", "location_id"),
+    )
+
 
 
 class LocationRow(Base):
@@ -105,7 +112,7 @@ class LocationRow(Base):
     )
 
     name: Mapped[str] = mapped_column(
-        String(120),
+        String(128),
         nullable=False,
     )
 
@@ -142,7 +149,7 @@ class ZoneRow(Base):
     )
 
     name: Mapped[str] = mapped_column(
-        String(120),
+        String(128),
         nullable=False,
     )
 
@@ -228,7 +235,7 @@ class AutomationRuleRow(Base):
         ),
         nullable=False,
         unique=True,
-        index=True,
+       
     )
 
     strategy_key: Mapped[str] = mapped_column(
@@ -267,4 +274,43 @@ class ActuatorStateRow(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+class ActuatorExecutionLogRow(Base):
+    __tablename__ = "actuator_execution_log"
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    device_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    success: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+    )
+
+    policy_applied: Mapped[list] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+
+    message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+        index=True,
     )

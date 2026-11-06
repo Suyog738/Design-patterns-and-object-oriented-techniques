@@ -16,6 +16,8 @@ import {
 import LocationConfigWizard from "../components/LocationConfigWizard";
 import StrategyPanel from "../components/StrategyPanel";
 import OverviewPanel from "../components/OverviewPanel";
+import ExecutionLog from "../components/ExecutionLog";
+
 
 
 export default function DashboardPage() {
@@ -841,7 +843,13 @@ export default function DashboardPage() {
         >
            <OverviewPanel />
         </section>
-
+                <section
+          id="executions"
+          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
+        >
+          <ExecutionLog />
+        </section>
+      
         <section
           id="controls"
           className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"

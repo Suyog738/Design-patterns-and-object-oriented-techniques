@@ -9,6 +9,8 @@ from interfaces.api.sensors import router as sensors_router
 from interfaces.api.locations import router as locations_router
 from interfaces.api.automation import router as automation_router
 from interfaces.api.overview import router as overview_router
+from interfaces.api.actuators import router as actuators_router
+
 
 app = FastAPI(
     title="Smart Greenhouse API",
@@ -51,6 +53,7 @@ app.include_router(devices_router)
 app.include_router(locations_router)
 app.include_router(automation_router)
 app.include_router(overview_router)
+app.include_router(actuators_router)
 
 
 @app.get("/")

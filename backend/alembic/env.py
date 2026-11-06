@@ -1,9 +1,7 @@
 from logging.config import fileConfig
 from pathlib import Path
 import sys
-from unittest.mock import Base
-from src.infrastructure.persistence.base import Base
-from src.infrastructure.persistence import models
+
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
@@ -19,7 +17,8 @@ sys.path.insert(0, str(SRC_DIR))
 
 
 from infrastructure.settings import settings
-
+from infrastructure.persistence.base import Base
+from infrastructure.persistence import models
 
 config = context.config
 
