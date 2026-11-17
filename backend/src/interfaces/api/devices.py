@@ -96,7 +96,8 @@ def devices_to_dtos(
     return [
         device_to_dto(
             device,
-            states.get(device.id) if device.role == "actuator" else None,
+            states.get(device.id, ActuatorState.IDLE.value) if device.role == "actuator" else None,
+
         )
         for device in devices
     ]

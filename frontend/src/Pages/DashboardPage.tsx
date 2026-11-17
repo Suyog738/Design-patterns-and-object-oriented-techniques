@@ -17,6 +17,7 @@ import LocationConfigWizard from "../components/LocationConfigWizard";
 import StrategyPanel from "../components/StrategyPanel";
 import OverviewPanel from "../components/OverviewPanel";
 import ExecutionLog from "../components/ExecutionLog";
+import CommandPanel from "../components/commands/CommandPanel";
 
 
 
@@ -851,17 +852,12 @@ export default function DashboardPage() {
         </section>
       
         <section
-          id="controls"
-          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
-        >
-          <h3 className="text-lg font-semibold text-emerald-700">
-            Controls
-          </h3>
+         id="controls"
+         className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
+     >
+       <CommandPanel />
+     </section>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Placeholder for the controls section.
-          </p>
-        </section>
 
         <section
           id="events"

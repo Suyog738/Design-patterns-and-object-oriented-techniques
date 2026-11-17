@@ -408,3 +408,55 @@ export async function applyActuatorCommand(
     body: JSON.stringify({ command, payload }),
   });
 }
+
+/* ---------------- Commands ---------------- */
+
+export type CommandType =
+  | "start_pump"
+  | "stop_pump"
+  | "set_light_level";
+
+export type CommandStatus = "success" | "failed" | "rejected";
+
+export interface CommandLogDto {
+  id: string;
+  command_type: string;
+  device_id: string;
+  payload: Record<string, unknown>;
+  status: CommandStatus;
+  error_message: string | null;
+  created_at: string;
+}
+
+export async function submitCommand(
+  commandType: CommandType,
+  deviceId: string,
+  payload: Record<string, unknown> = {},
+): Promise<CommandLogDto> {
+  const response = await fetch(`${API_BASE_URL}/api/commands`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      command_type: commandType,
+      device_id: deviceId,
+      payload,
+    }),
+  });
+
+  const data = await response.json().catch(() => null);
+
+  // 200 (success/failed) and 409 (rejected) both return a log row.
+  if (response.ok || response.status === 409) {
+    return data as CommandLogDto;
+  }
+
+  throw new Error(
+    typeof data?.detail === "string" ? data.detail : "Command failed.",
+  );
+}
+
+export async function fetchCommands(
+  limit = 50,
+): Promise<CommandLogDto[]> {
+  return request<CommandLogDto[]>(`/api/commands?limit=${limit}`);
+}

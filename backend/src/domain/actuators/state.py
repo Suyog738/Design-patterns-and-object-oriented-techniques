@@ -43,11 +43,12 @@ ALLOWED_TRANSITIONS: dict[ActuatorState, set[ActuatorState]] = {
 
 ALLOWED_COMMANDS: dict[ActuatorState, list[str]] = {
     ActuatorState.OFF: ["turn_on"],
-    ActuatorState.IDLE: ["start_pump", "turn_off", "enter_maintenance"],
-    ActuatorState.RUNNING: ["stop_pump"],
+    ActuatorState.IDLE: ["start_pump", "set_light_level", "turn_off", "enter_maintenance"],
+    ActuatorState.RUNNING: ["stop_pump", "set_light_level"],
     ActuatorState.ERROR: ["reset", "enter_maintenance"],
     ActuatorState.MAINTENANCE: ["exit_maintenance"],
 }
+
 
 
 COMMAND_TARGETS: dict[str, ActuatorState] = {
