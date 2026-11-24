@@ -16,12 +16,17 @@ from infrastructure.persistence.models import DeviceRow
 from infrastructure.persistence.reading_repository import (
     ReadingRepository,
 )
+from domain.events.bus import EventBus
+from domain.events.events import ReadingCreated
+
 
 
 class ReadingIngest:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, bus: EventBus | None = None):
         self._db = db
         self._repository = ReadingRepository(db)
+        self._bus = bus or EventBus()
+
 
     def take_reading(self, device_id: UUID) -> ReadingDto:
         device = self._db.get(DeviceRow, device_id)
@@ -58,7 +63,7 @@ class ReadingIngest:
         reading = port.read(domain_device)
 
         saved_reading = self._repository.insert(reading)
-
+        self._publish(device, saved_reading)
         return self._to_dto(saved_reading)
 
     def record(
@@ -78,8 +83,48 @@ class ReadingIngest:
             raise ValueError("Device not found.")
 
         saved_reading = self._repository.insert(reading)
+        self._publish(device, saved_reading)
 
         return self._to_dto(saved_reading)
+
+    def ingest_mqtt(
+        self,
+        device_id: UUID,
+        payload: dict,
+    ) -> ReadingDto:
+        """MQTT translation: raw payload -> Reading -> record()."""
+        device = self._db.get(DeviceRow, device_id)
+
+        if device is None:
+            raise ValueError("Device not found.")
+
+        if device.role != "sensor":
+            raise ValueError("Device is not a sensor.")
+
+        reading = MqttSensorAdapter().translate(
+            self._to_domain_device(device),
+            payload,
+        )
+
+        return self.record(device_id, reading)
+
+    def _publish(self, device: DeviceRow, reading: Reading) -> None:
+        # Tracking off: the reading is stored, but nobody is notified.
+        if not device.tracking_enabled:
+            return
+
+        self._bus.publish(
+            ReadingCreated(
+                device_id=reading.device_id,
+                value=reading.value,
+                unit=reading.unit,
+                source=reading.source,
+                recorded_at=reading.recorded_at,
+                location_id=device.location_id,
+                zone_id=device.zone_id,
+            )
+        )
+
 
     def list_readings(
         self,

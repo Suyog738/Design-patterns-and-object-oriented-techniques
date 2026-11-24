@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from application.commands.dto import CommandLogDto, CommandRequestDto
 from application.commands.service import CommandService
 from infrastructure.db import get_db
+from composition import get_event_bus
+from domain.events.bus import EventBus
 
 
 router = APIRouter(
@@ -26,13 +28,15 @@ def submit_command(
     request: CommandRequestDto,
     response: Response,
     db: Session = Depends(get_db),
+    bus: EventBus = Depends(get_event_bus),
 ) -> CommandLogDto:
     try:
-        log = CommandService(db).submit(
+        log = CommandService(db, bus=bus).submit(
             request.command_type,
             request.device_id,
             request.payload,
         )
+
     except LookupError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     except ValueError as exc:

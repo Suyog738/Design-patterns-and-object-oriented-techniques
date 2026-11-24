@@ -16,6 +16,8 @@ from infrastructure.persistence.command_log_repository import (
     CommandLogRepository,
 )
 from infrastructure.persistence.models import DeviceRow
+from domain.events.bus import EventBus
+from domain.events.events import ActuatorStateChanged, CommandFailed
 
 
 class CommandService:
@@ -24,12 +26,15 @@ class CommandService:
         db: Session,
         port: ActuatorPort | None = None,
         invoker: CommandInvoker | None = None,
+        bus: EventBus | None = None,
     ) -> None:
         self._db = db
         self._port = port or build_actuator_port(db)  # Phase 9 decorated stack
         self._invoker = invoker or CommandInvoker()
+        self._bus = bus or EventBus()
         self._logs = CommandLogRepository(db)
         self._states = ActuatorStateRepository(db)
+
 
     def submit(
         self,
@@ -59,22 +64,44 @@ class CommandService:
                 f"in state {current.value}.",
             )
 
-        # 2. Port: goes through logging -> maxRunTime -> adapter.
+                # 2. Port: goes through logging -> maxRunTime -> adapter.
         try:
             self._invoker.run(command, self._port)
         except ActuatorPolicyError as exc:
             # Execution-log row was already written by the decorator.
-            return self._log(command, "failed", str(exc))
+            log = self._log(command, "failed", str(exc))
+            self._bus.publish(
+                CommandFailed(
+                    device_id=device_id,
+                    location_id=device.location_id,
+                    zone_id=device.zone_id,
+                    command_type=command.command_type,
+                    message=str(exc),
+                )
+            )
+            return log
 
         # 3. State: only transition when the target differs.
         if (
             command.target_state is not None
             and command.target_state != current.value
         ):
-            self._states.transition(device_id, command.target_state)
+            new_state, _ = self._states.transition(
+                device_id, command.target_state
+            )
+            self._bus.publish(
+                ActuatorStateChanged(
+                    device_id=device_id,
+                    location_id=device.location_id,
+                    zone_id=device.zone_id,
+                    previous_state=current.value,
+                    state=new_state.value,
+                )
+            )
 
         # 4. Log success.
         return self._log(command, "success", None)
+
 
     def list_recent(self, limit: int = 50) -> list[CommandLogDto]:
         return [

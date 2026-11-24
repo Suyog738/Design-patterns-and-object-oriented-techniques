@@ -7,6 +7,8 @@ from application.readings.service import ReadingIngest
 from application.sensors.service import SensorService
 from infrastructure.db import get_db
 from infrastructure.persistence.device_repository import DeviceRepository
+from composition import get_event_bus
+from domain.events.bus import EventBus
 
 
 router = APIRouter(
@@ -36,8 +38,13 @@ def get_sensor_service(
 
 def get_reading_ingest(
     db: Session = Depends(get_db),
+    bus: EventBus = Depends(get_event_bus),
 ) -> ReadingIngest:
-    return ReadingIngest(db)
+    return ReadingIngest(db, bus)
+
+class MqttPayloadRequest(BaseModel):
+    value: float
+    unit: str
 
 
 @router.post(
@@ -98,6 +105,32 @@ def read_sensor(
 ):
     try:
         return service.take_reading(device_id)
+
+    except ValueError as exc:
+        message = str(exc)
+
+        if message == "Device not found.":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=message,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message,
+        )
+
+@router.post(
+    "/{device_id}/ingest",
+    response_model=ReadingDto,
+)
+def ingest_sensor_payload(
+    device_id: UUID,
+    request: MqttPayloadRequest,
+    service: ReadingIngest = Depends(get_reading_ingest),
+):
+    try:
+        return service.ingest_mqtt(device_id, request.model_dump())
 
     except ValueError as exc:
         message = str(exc)

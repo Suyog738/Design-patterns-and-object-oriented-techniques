@@ -6,13 +6,15 @@ from sqlalchemy.orm import Session
 from application.readings.service import ReadingIngest
 from infrastructure.persistence.models import DeviceRow
 from infrastructure.persistence.reading_repository import ReadingRepository
+from domain.events.bus import EventBus
 
 
 class SimulationSampler:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, bus: EventBus | None = None):
         self._db = db
-        self._ingest = ReadingIngest(db)
+        self._ingest = ReadingIngest(db, bus)
         self._repository = ReadingRepository(db)
+
 
     def run_once(self, now: datetime) -> None:
         statement = (

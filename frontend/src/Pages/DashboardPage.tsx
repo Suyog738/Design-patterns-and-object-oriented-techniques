@@ -18,6 +18,7 @@ import StrategyPanel from "../components/StrategyPanel";
 import OverviewPanel from "../components/OverviewPanel";
 import ExecutionLog from "../components/ExecutionLog";
 import CommandPanel from "../components/commands/CommandPanel";
+import EventFeed from "../components/alerts/EventFeed";
 
 
 
@@ -859,18 +860,13 @@ export default function DashboardPage() {
      </section>
 
 
-        <section
-          id="events"
-          className="min-h-40 rounded-xl border bg-white p-6 shadow-sm"
-        >
-          <h3 className="text-lg font-semibold text-emerald-700">
-            Events
-          </h3>
+             <section
+       id="events"
+       className="min-h-40 rounded-xl border bg-white p-6 shadow-sm md:col-span-2 lg:col-span-3"
+     >
+       <EventFeed />
+     </section>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Placeholder for the events section.
-          </p>
-        </section>
       </div>
     </div>
   );

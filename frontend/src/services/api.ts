@@ -460,3 +460,42 @@ export async function fetchCommands(
 ): Promise<CommandLogDto[]> {
   return request<CommandLogDto[]>(`/api/commands?limit=${limit}`);
 }
+
+/* ---------------- Alerts ---------------- */
+
+export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertStatusFilter = "active" | "resolved" | "all";
+
+export interface AlertDto {
+  id: string;
+  location_id: string | null;
+  zone_id: string | null;
+  device_id: string | null;
+  severity: AlertSeverity;
+  message: string;
+  event_type: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AlertFilters {
+  status?: AlertStatusFilter;
+  locationId?: string;
+  zoneId?: string;
+  since?: string;
+  limit?: number;
+}
+
+export async function fetchAlerts(
+  filters: AlertFilters = {},
+): Promise<AlertDto[]> {
+  const params = new URLSearchParams();
+
+  params.set("status", filters.status ?? "active");
+  params.set("limit", String(filters.limit ?? 50));
+  if (filters.locationId) params.set("location_id", filters.locationId);
+  if (filters.zoneId) params.set("zone_id", filters.zoneId);
+  if (filters.since) params.set("since", filters.since);
+
+  return request<AlertDto[]>(`/api/alerts?${params.toString()}`);
+}

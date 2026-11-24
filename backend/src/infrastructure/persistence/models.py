@@ -359,3 +359,61 @@ class CommandLogRow(Base):
         server_default=text("now()"),
         index=True,
     )
+
+class AlertRow(Base):
+    __tablename__ = "alerts"
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    location_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("locations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    zone_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("zones.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    device_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("devices.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # info | warning | critical
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # threshold.crossed | command.failed | state.changed
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # active | resolved
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="active",
+        server_default="active",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+        index=True,
+    )
+
+    acknowledged_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )

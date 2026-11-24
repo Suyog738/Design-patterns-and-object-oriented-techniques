@@ -22,6 +22,9 @@ from infrastructure.persistence.actuator_state_repository import (
 )
 from infrastructure.persistence.device_repository import DeviceRepository
 from infrastructure.persistence.models import DeviceRow
+from application.actuators.transition_service import ActuatorTransitionService
+from composition import get_event_bus
+from domain.events.bus import EventBus
 
 
 router = APIRouter(
@@ -165,14 +168,16 @@ def transition_actuator(
     device_id: UUID,
     request: TransitionRequest,
     db: Session = Depends(get_db),
+    bus: EventBus = Depends(get_event_bus),
 ) -> DeviceDto:
-    repository = ActuatorStateRepository(db)
+    service = ActuatorTransitionService(db, bus)
 
     try:
-        state, _ = repository.transition(
+        state, _ = service.transition(
             device_id=device_id,
             target=request.target,
         )
+
     except LookupError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
